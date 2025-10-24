@@ -51,8 +51,6 @@ CONVERSATION FLOW:
 CRITICAL COMPLETION RULE:
 - After saying "Thank you for providing this information. I have collected all the necessary details." you MUST STOP asking questions
 - Do NOT ask any follow-up questions after this completion message
-- Do NOT ask for additional information
-- Do NOT ask if they have any other concerns
 - The conversation is COMPLETE after this message
 
 
