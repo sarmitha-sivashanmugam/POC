@@ -1854,9 +1854,6 @@ function handleWebSocketMessage(event) {
                 // Show simple analyzing animation only if not manually stopped
                 showSimpleAnalyzingAnimation();
                 
-                // Save conversation to backend
-                saveConversationToBackend();
-                
                 // Process conversation with LLM
                 await processConversationWithLLM();
                 
@@ -2676,36 +2673,6 @@ function storeAIMessage(text) {
   console.log('Total messages in conversation:', conversationData.messages.length);
 }
 
-// Save conversation to backend (conversations folder)
-function saveConversationToBackend() {
-  console.log('Saving complete conversation to backend...');
-  console.log('Total messages to save:', conversationData.messages.length);
-  console.log('Conversation data:', conversationData);
-  
-  fetch('/api/save-conversation/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': getCookie('csrftoken')
-    },
-    body: JSON.stringify({
-      conversation: conversationData,
-      save_to_folder: true,
-      folder_path: 'conversations'
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    console.log(' Conversation saved to backend:', data);
-    if (data.success) {
-      console.log('Complete conversation saved to conversations folder:', data.file_path);
-      console.log('Total messages saved:', conversationData.messages.length);
-    }
-  })
-  .catch(error => {
-    console.error('Error saving to backend:', error);
-  });
-}
 
 // Get CSRF token
 function getCookie(name) {
