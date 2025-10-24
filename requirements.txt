@@ -1,0 +1,50 @@
+# Core Django Framework
+Django==5.2.6
+asgiref==3.9.2
+sqlparse==0.5.3
+
+# WebSocket and Real-time Communication
+channels==4.3.1
+channels_redis==4.3.0
+daphne==4.2.1
+redis==6.4.0
+
+# Google AI 
+google-genai
+google-generativeai
+google-ai-generativelanguage==0.6.15
+google-api-core==2.25.1
+google-api-python-client==2.183.0
+google-auth==2.41.0
+google-auth-httplib2==0.2.0
+googleapis-common-protos==1.70.0
+
+
+# HTTP and API Communication
+aiohttp==3.9.1
+requests==2.32.5
+httplib2==0.31.0
+urllib3==2.5.0
+
+# Data Processing
+pandas==2.3.3
+openpyxl==3.1.5
+
+# Security and Authentication
+cryptography==46.0.1
+pyOpenSSL==25.3.0
+rsa==4.9.1
+
+# Environment and Configuration
+python-dotenv
+
+# Development and Testing
+pytest
+pytest-django
+pytest-asyncio
+
+# Production Dependencies
+gunicorn
+whitenoise
+
+

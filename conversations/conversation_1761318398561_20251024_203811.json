@@ -1,0 +1,252 @@
+{
+  "id": 1761318398561,
+  "timestamp": "2025-10-24T15:06:38.561Z",
+  "messages": [
+    {
+      "role": "ai",
+      "text": "Hello! I'm your SuperMouth AI Assistant. How are you doing today?",
+      "timestamp": "2025-10-24T15:06:45.867Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " आई एम फाइन",
+      "timestamp": "2025-10-24T15:06:49.702Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "ai",
+      "text": "Could you please speak in English? Thank you! For whom are you here today?",
+      "timestamp": "2025-10-24T15:06:53.650Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " For myself",
+      "timestamp": "2025-10-24T15:06:58.113Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "ai",
+      "text": "What is your name?",
+      "timestamp": "2025-10-24T15:07:01.799Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " ആം ഷാർമിത",
+      "timestamp": "2025-10-24T15:07:03.426Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "ai",
+      "text": "It's nice to meet you, Sharmita. How old are you?",
+      "timestamp": "2025-10-24T15:07:08.349Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " आई एम 22",
+      "timestamp": "2025-10-24T15:07:10.993Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "ai",
+      "text": "What is your gender?",
+      "timestamp": "2025-10-24T15:07:14.581Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " I am female.",
+      "timestamp": "2025-10-24T15:07:16.690Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "ai",
+      "text": "Are you currently pregnant?",
+      "timestamp": "2025-10-24T15:07:20.532Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " No",
+      "timestamp": "2025-10-24T15:07:21.919Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "ai",
+      "text": "Do you have braces or any orthodontic treatment?",
+      "timestamp": "2025-10-24T15:07:26.806Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " Now",
+      "timestamp": "2025-10-24T15:07:28.758Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "ai",
+      "text": "Could you please clarify that for me? Did you say no?",
+      "timestamp": "2025-10-24T15:07:32.430Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " Yes.",
+      "timestamp": "2025-10-24T15:07:35.307Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "ai",
+      "text": "What is your current dental care routine like? For example, what toothpaste do you use and how often do you brush?",
+      "timestamp": "2025-10-24T15:07:40.508Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " I",
+      "timestamp": "2025-10-24T15:07:42.928Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " bru",
+      "timestamp": "2025-10-24T15:07:43.219Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": "sh",
+      "timestamp": "2025-10-24T15:07:43.371Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " my",
+      "timestamp": "2025-10-24T15:07:43.535Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " tee",
+      "timestamp": "2025-10-24T15:07:43.719Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": "th",
+      "timestamp": "2025-10-24T15:07:43.889Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " mor",
+      "timestamp": "2025-10-24T15:07:44.034Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": "ning",
+      "timestamp": "2025-10-24T15:07:44.201Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " and",
+      "timestamp": "2025-10-24T15:07:44.367Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " night",
+      "timestamp": "2025-10-24T15:07:44.633Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " and",
+      "timestamp": "2025-10-24T15:07:44.968Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " I",
+      "timestamp": "2025-10-24T15:07:45.823Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " don",
+      "timestamp": "2025-10-24T15:07:46.089Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": "'t",
+      "timestamp": "2025-10-24T15:07:46.257Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " use",
+      "timestamp": "2025-10-24T15:07:46.427Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " mo",
+      "timestamp": "2025-10-24T15:07:46.745Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": "uth",
+      "timestamp": "2025-10-24T15:07:46.914Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " wa",
+      "timestamp": "2025-10-24T15:07:47.087Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": "sh or flash.",
+      "timestamp": "2025-10-24T15:07:47.134Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "ai",
+      "text": "Do you have any dental problems or symptoms you're experiencing, such as pain, sensitivity, bleeding, or swelling?",
+      "timestamp": "2025-10-24T15:07:52.454Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " No, no, no.",
+      "timestamp": "2025-10-24T15:07:53.045Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "ai",
+      "text": "Can you tell me more about that? Are you saying you don't have any dental problems or symptoms?",
+      "timestamp": "2025-10-24T15:07:57.470Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "user",
+      "text": " Yes.",
+      "timestamp": "2025-10-24T15:08:05.762Z",
+      "source": "Gemini"
+    },
+    {
+      "role": "ai",
+      "text": "Thank you for providing this information. I have collected all the necessary details.",
+      "timestamp": "2025-10-24T15:08:09.789Z",
+      "source": "Gemini"
+    }
+  ]
+}
