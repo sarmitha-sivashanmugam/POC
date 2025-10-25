@@ -209,11 +209,11 @@ class LLMProcessor:
             elif role == 'ai':
                 conversation_text += f"A: {text}\n"
         
-        # Format only product names and descriptions (much more concise)
+        # Format only product names and descriptions (full descriptions)
         products_text = "Available Products:\n\n"
         for i, product in enumerate(filtered_products, 1):
-            # Truncate description if too long
-            description = product['description'][:150] + "..." if len(product['description']) > 150 else product['description']
+            # Send full description without truncation
+            description = product['description'] or 'No description available'
             products_text += f"{i}. {product['name']}\n"
             products_text += f"   {description}\n\n"
         
