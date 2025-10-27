@@ -314,6 +314,7 @@
 
     .message-item.user-message {
         justify-content: flex-end;
+        display: none !important; /* Hide user messages */
     }
 
     @keyframes slideInMessage {
@@ -418,62 +419,13 @@
     }
 
 
-    .user-text {
-        font-size: 1rem;
-        line-height: 1.5;
-        margin: 0 0 8px 0;
-        font-weight: 400;
-        color: #2c3e50;
-        position: relative;
-        z-index: 2;
-        transition: all 0.2s ease;
-    }
+    /* User text styles removed - user messages are hidden */
 
-    /* User Answer Bubble (Right) */
-    .user-message {
-        display: flex;
-        justify-content: flex-end;
-        align-items: flex-start;
-        gap: 12px;
-        transition: all 0.5s ease-out;
-        opacity: 1;
-        transform: translateY(0);
-    }
+    /* User message styles removed - user messages are hidden */
 
-    .user-message.fade-out {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
+    /* User bubble styles removed - user messages are hidden */
 
-    .user-bubble {
-        background: linear-gradient(135deg, #f8fffe 0%, #e8f5f3 50%, #f0f9ff 100%);
-        color: #2c3e50;
-        padding: 16px 20px;
-        border-radius: 8px 8px 4px 8px;
-        box-shadow: none;
-        max-width: 75%;
-        position: relative;
-        animation: slideInFromRight 0.4s ease-out;
-        transition: all 0.2s ease;
-        transform: translateY(0);
-        opacity: 1;
-        border: 2px solid #1e3a8a;
-    }
-
-    .user-bubble:hover {
-        box-shadow: none;
-    }
-
-    @keyframes slideInFromRight {
-        from { 
-            transform: translateX(20px); 
-            opacity: 0; 
-        }
-        to { 
-            transform: translateX(0); 
-            opacity: 1; 
-        }
-    }
+    /* User animations removed - user messages are hidden */
 
     @keyframes slideInFromLeft {
         from { 
@@ -491,34 +443,7 @@
         50% { opacity: 0.5; }
     }
 
-    .user-bubble::before {
-        content: '';
-        position: absolute;
-        right: -8px;
-        bottom: 8px;
-        width: 0;
-        height: 0;
-        border-style: solid;
-        border-width: 0 0 8px 8px;
-        border-color: transparent transparent transparent #059669;
-    }
-
-    .user-avatar {
-        background: linear-gradient(135deg, #10b981, #059669);
-        border-radius: 50%;
-        width: 35px;
-        height: 35px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        box-shadow: 0 3px 12px rgba(16, 185, 129, 0.3);
-    }
-
-    .user-avatar i {
-        font-size: 1rem;
-        color: white;
-    }
+    /* User bubble pseudo-element removed - user messages are hidden */
     /* Professional Control Button */
 
     .dental-controls {
@@ -891,7 +816,7 @@
             font-size: 2.2rem;
         }
 
-        .ai-bubble, .user-bubble {
+        .ai-bubble {
             max-width: 85%;
             padding: 18px 22px;
         }
@@ -1458,7 +1383,7 @@ async function playNextInQueue() {
     
     isPlaying = true;
     const pcmData = audioQueue.shift();
-    console.log('🎵 Playing audio chunk:', pcmData.byteLength, 'bytes');
+    console.log('Playing audio chunk:', pcmData.byteLength, 'bytes');
     
     try {
         console.log(' Converting PCM to AudioBuffer...');
@@ -1763,8 +1688,8 @@ function handleWebSocketMessage(event) {
         console.log('===== LLM RESULT RECEIVED FROM WEBSOCKET =====');
         console.log('LLM result:', data.result);
         
-        // Trigger cart addition with the result
-        addProductsToCartAndRedirect(data.result);
+       
+
         
     } else if (data.type === 'ai_transcript') {
         console.log('AI transcript chunk:', data.text);
@@ -1818,12 +1743,10 @@ function handleWebSocketMessage(event) {
             console.log('AI message buffer:', aiMessageBuffer);
             console.log('Looking for completion phrases...');
             
-            if (aiMessageBuffer.toLowerCase().includes('Thank you for providing this information. I have collected all the necessary details.') || 
-                aiMessageBuffer.toLowerCase().includes('i have collected all the necessary details')) {
-              console.log('✅ AI completed consultation - auto-triggering processing...');
+            if (aiMessageBuffer.toLowerCase().includes("thank you! i've added your products to the cart. you can now proceed to checkout.")) {
+            console.log('✅ AI added products to cart - redirecting to cart page...');
+ 
               
-              // Show auto-processing indicator
-              updateStatus('Consultation complete - Processing recommendations automatically...');
               
               // Process conversation with LLM directly (not through stopConversation)
               setTimeout(async () => {
@@ -1851,15 +1774,11 @@ function handleWebSocketMessage(event) {
                   processor = null;
                 }
                 
-                // Show simple analyzing animation only if not manually stopped
-                showSimpleAnalyzingAnimation();
                 
-                // Process conversation with LLM
-                await processConversationWithLLM();
+
+                window.location.href = '/cart/';
                 
-                // Animation will handle redirect after completion
-                console.log('Processing complete - Animation will redirect to cart...');
-              }, 1500); // Wait 1.5 seconds for the message to be fully displayed
+              }, 3000); // Wait 3 seconds for the message to be fully displayed and AI to finish speaking
             }
             
             // Reset AI response state
@@ -1891,41 +1810,6 @@ function handleWebSocketMessage(event) {
     
   } catch (error) {
     console.error('Error parsing WebSocket message:', error);
-  }
-}
-// Show user message in chat
-function showUserMessage(text) {
-  console.log('User message:', text);
-  
-  // Remove existing user message
-  if (currentUserMessage) {
-    currentUserMessage.remove();
-  }
-  
-  // Create new user message
-  currentUserMessage = createMessageBubble('user', text);
-  const historyContainer = document.getElementById('conversationHistory');
-  if (historyContainer) {
-    historyContainer.appendChild(currentUserMessage);
-    scrollToBottom();
-  }
-}
-
-// Show AI message in chat
-function showAIMessage(text) {
-  console.log('AI message:', text);
-  
-  // Remove existing AI message
-  if (currentAIMessage) {
-    currentAIMessage.remove();
-  }
-  
-  // Create new AI message
-  currentAIMessage = createMessageBubble('ai', text);
-  const historyContainer = document.getElementById('conversationHistory');
-  if (historyContainer) {
-    historyContainer.appendChild(currentAIMessage);
-    scrollToBottom();
   }
 }
 
@@ -2031,269 +1915,6 @@ async function resumeConversation() {
   }
 }
 
-// Check if assessment is complete by looking for AI completion messages
-function checkIfAssessmentComplete() {
-  console.log(" Checking if assessment is complete...");
-  
-  // Look through all AI messages for completion indicators
-  for (let message of conversationData.messages) {
-    if (message.role === 'ai') {
-      const text = message.content.toLowerCase();
-      if (text.includes('thank you for providing this information') || 
-          text.includes('i have collected all the necessary details') ||
-          text.includes('thank you for the information') ||
-          text.includes('assessment complete') ||
-          text.includes('consultation complete')) {
-        console.log("Found completion message:", message.content);
-        return true;
-      }
-    }
-  }
-  
-  console.log("No completion message found");
-  return false;
-}
-
-// Show simple analyzing animation with existing theme
-function showSimpleAnalyzingAnimation() {
-  console.log("Showing simple analyzing animation...");
-  
-  const analyzingOverlay = document.createElement('div');
-  analyzingOverlay.id = 'analyzingOverlay';
-  analyzingOverlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, rgba(248, 255, 254, 0.95) 0%, rgba(232, 245, 243, 0.95) 50%, rgba(240, 249, 255, 0.95) 100%);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-    color: #2c3e50;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  `;
-  
-  analyzingOverlay.innerHTML = `
-    <div style="
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 16px;
-      padding: 40px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      max-width: 400px;
-      width: 90%;
-      text-align: center;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    ">
-      <!-- Loading Spinner -->
-      <div style="
-        width: 40px;
-        height: 40px;
-        border: 3px solid #f3f4f6;
-        border-top: 3px solid #4A148C;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 24px;
-      "></div>
-      
-      <!-- Title -->
-      <h2 style="
-        margin: 0 0 24px 0;
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: #2c3e50;
-      ">Analyzing Your Dental Assessment</h2>
-      
-      <!-- Progress Steps -->
-      <div style="text-align: left;">
-        <div class="analyzing-step" data-step="1" style="
-          display: flex;
-          align-items: center;
-          margin-bottom: 16px;
-          padding: 8px 0;
-          transition: all 0.3s ease;
-        ">
-          <div class="step-dot" style="
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 12px;
-            flex-shrink: 0;
-            background: #22c55e;
-          "></div>
-          <div class="step-text" style="
-            font-size: 0.9rem;
-            color: #22c55e;
-            font-weight: 500;
-          ">Processing Assessment data...</div>
-      </div>
-        
-        <div class="analyzing-step" data-step="2" style="
-    display: flex;
-    align-items: center;
-          margin-bottom: 16px;
-          padding: 8px 0;
-          transition: all 0.3s ease;
-        ">
-          <div class="step-dot" style="
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 12px;
-            flex-shrink: 0;
-            background: #4A148C;
-            animation: pulse 2s infinite;
-          "></div>
-          <div class="step-text" style="
-            font-size: 0.9rem;
-            color: #4A148C;
-            font-weight: 500;
-          ">Calculating recommendations...</div>
-      </div>
-      
-        <div class="analyzing-step" data-step="3" style="
-          display: flex;
-          align-items: center;
-          margin-bottom: 16px;
-          padding: 8px 0;
-          transition: all 0.3s ease;
-        ">
-          <div class="step-dot" style="
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 12px;
-            flex-shrink: 0;
-            background: #d1d5db;
-          "></div>
-          <div class="step-text" style="
-            font-size: 0.9rem;
-            color: #9ca3af;
-            font-weight: 500;
-          ">Generating product suggestions...</div>
-      </div>
-      
-        <div class="analyzing-step" data-step="4" style="
-          display: flex;
-          align-items: center;
-          margin-bottom: 16px;
-          padding: 8px 0;
-          transition: all 0.3s ease;
-        ">
-          <div class="step-dot" style="
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 12px;
-            flex-shrink: 0;
-            background: #d1d5db;
-          "></div>
-          <div class="step-text" style="
-            font-size: 0.9rem;
-            color: #9ca3af;
-            font-weight: 500;
-          ">Finalizing your cart...</div>
-        </div>
-      </div>
-    </div>
-    
-    <style>
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      
-      @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.2); }
-        100% { transform: scale(1); }
-      }
-      
-      .analyzing-step.completed .step-dot {
-        background: #22c55e !important;
-      }
-      
-      .analyzing-step.completed .step-text {
-        color: #22c55e !important;
-      }
-      
-      .analyzing-step.active .step-dot {
-        background: #4A148C !important;
-        animation: pulse 2s infinite;
-      }
-      
-      .analyzing-step.active .step-text {
-        color: #4A148C !important;
-      }
-    </style>
-  `;
-  
-  document.body.appendChild(analyzingOverlay);
-  
-  // Start analyzing animation
-  startAnalyzingAnimation();
-}
-
-// Start analyzing animation
-function startAnalyzingAnimation() {
-  const steps = document.querySelectorAll('.analyzing-step');
-  let currentStep = 0;
-  
-  const analyzingInterval = setInterval(() => {
-    if (currentStep < steps.length) {
-      // Complete previous step
-      if (currentStep > 0) {
-        steps[currentStep - 1].classList.remove('active');
-        steps[currentStep - 1].classList.add('completed');
-      }
-      
-      // Activate current step
-      if (currentStep < steps.length) {
-        steps[currentStep].classList.add('active');
-      }
-      
-      currentStep++;
-    } else {
-      clearInterval(analyzingInterval);
-      // Complete all steps and redirect to cart after animation
-      setTimeout(() => {
-        // Complete the last step
-        steps[steps.length - 1].classList.remove('active');
-        steps[steps.length - 1].classList.add('completed');
-        
-        // Animation complete - trigger cart addition
-        console.log("Animation complete - triggering cart addition...");
-        
-        // Trigger cart addition with the conversation data
-        if (conversationData && conversationData.messages && conversationData.messages.length > 0) {
-          console.log("Calling processConversationWithLLM from animation...");
-          processConversationWithLLM();
-        } else {
-          console.log("No conversation data available for cart addition");
-        }
-      }, 2000);
-    }
-  }, 2500); // Change step every 2.5 seconds for longer animation
-}
-
-// Hide analyzing animation
-function hideAnalyzingAnimation() {
-  console.log("Hiding analyzing animation...");
-  
-  const analyzingOverlay = document.getElementById('analyzingOverlay');
-  if (analyzingOverlay) {
-    analyzingOverlay.style.opacity = '0';
-    analyzingOverlay.style.transition = 'opacity 0.3s ease';
-    setTimeout(() => {
-      if (analyzingOverlay.parentNode) {
-        analyzingOverlay.parentNode.removeChild(analyzingOverlay);
-      }
-    }, 300);
-  }
-}
-
 // Stop conversation
 async function stopConversation() {
   console.log("===== STOP BUTTON PRESSED =====");
@@ -2356,141 +1977,6 @@ async function stopConversation() {
   
   console.log("Conversation stopped - no processing");
 }
-
-
-// Process conversation with LLM
-async function processConversationWithLLM() {
-  console.log("🚀 ===== STARTING LLM PROCESSING =====");
-  console.log("🚀 Processing conversation with LLM...");
-  console.log("🚀 Conversation data being sent:", conversationData);
-  console.log("🚀 Total messages:", conversationData.messages.length);
-  console.log("🚀 Conversation ID:", conversationData.id);
-  
-  try {
-    console.log("Sending request to /api/process-conversation/");
-    const response = await fetch('/api/process-conversation/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCookie('csrftoken')
-      },
-      body: JSON.stringify({
-        conversation: conversationData
-      })
-    });
-    
-    console.log("Response received:", response.status);
-    const result = await response.json();
-    console.log("Full response from backend:", result);
-    
-    if (result.success) {
-      console.log("===== LLM PROCESSING SUCCESSFUL =====");
-      console.log("Result from LLM:", result.result);
-      console.log("Patient info:", result.result.patient_info);
-      console.log("Filtered products count:", result.result.final_filtered_count || result.result.filtered_products_count);
-      
-      // Auto-add products to cart and redirect
-      await addProductsToCartAndRedirect(result.result);
-    } else {
-      console.error("===== LLM PROCESSING FAILED =====");
-      console.error("LLM processing failed:", result.error);
-      console.log('Error processing consultation');
-    }
-  } catch (error) {
-    console.error("===== ERROR IN LLM PROCESSING =====");
-    console.error("Error processing conversation with LLM:", error);
-  }
-}
-
-// Add products to cart and redirect to cart page
-async function addProductsToCartAndRedirect(result) {
-  console.log("===== ADDING PRODUCTS TO CART =====");
-  console.log("Full result object:", result);
-  
-  try {
-    const products = result.final_products || result.filtered_products || [];
-    console.log(`Adding ${products.length} products to cart`);
-    console.log("Products array:", products);
-    
-    if (products.length === 0) {
-      console.log("No products to add to cart");
-      console.log("Available keys in result:", Object.keys(result));
-      // Still redirect to cart even if empty
-      setTimeout(() => {
-        window.location.href = '/cart/';
-      }, 1000);
-      return;
-    }
-    
-    // Check if user is authenticated
-    const csrfToken = getCookie('csrftoken');
-    if (!csrfToken) {
-      console.error("CSRF token not found - user may not be authenticated");
-      console.log("Redirecting to login...");
-      window.location.href = '/login/';
-      return;
-    }
-    
-    // Prepare products for cart API using product names instead of IDs
-    const cartProducts = products.map(product => ({
-      name: product.name,
-      quantity: 1
-    }));
-    
-    console.log("Cart products to add (by name):", cartProducts);
-    console.log("CSRF Token:", csrfToken);
-    console.log("Request payload:", JSON.stringify({
-      products: cartProducts
-    }));
-    
-    // Add products to cart
-    console.log("Making cart API call to /api/cart/add/");
-    const response = await fetch('/api/cart/add/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrfToken
-      },
-      body: JSON.stringify({
-        products: cartProducts
-      })
-    });
-    
-    console.log("Cart API response status:", response.status);
-    console.log("Cart API response headers:", response.headers);
-    
-    if (!response.ok) {
-      console.error("Cart API returned error status:", response.status);
-      const errorText = await response.text();
-      console.error("Error response body:", errorText);
-      return;
-    }
-    
-    const cartResult = await response.json();
-    console.log("Cart API response:", cartResult);
-    
-    if (cartResult.success) {
-      console.log("Products added to cart successfully");
-      console.log("Added items:", cartResult.added_items);
-      console.log("Total items added:", cartResult.added_items ? cartResult.added_items.length : 0);
-      
-      // Redirect to cart page after successful addition
-      console.log("Redirecting to cart page...");
-      setTimeout(() => {
-        window.location.href = '/cart/';
-      }, 1000);
-      
-    } else {
-      console.error("Failed to add products to cart:", cartResult.error);
-      console.log('Error adding products to cart');
-    }
-    
-  } catch (error) {
-    console.error("Error adding products to cart:", error);
-    console.log('Error adding products to cart');
-  }
-}
-
 
 
 // Clear chat container
@@ -2623,23 +2109,6 @@ function initializeConversation() {
   console.log('Conversation initialized:', conversationData.id);
 }
 
-// Test audio system function
-function testAudioSystem() {
-  console.log('Testing audio system...');
-  console.log(' Web Audio API support:', !!(window.AudioContext || window.webkitAudioContext));
-  console.log('MediaDevices support:', !!navigator.mediaDevices);
-  console.log(' getUserMedia support:', !!navigator.mediaDevices?.getUserMedia);
-  console.log('WebSocket support:', !!window.WebSocket);
-  
-  // Test audio context creation
-  try {
-    const testContext = new (window.AudioContext || window.webkitAudioContext)();
-    console.log(' AudioContext test:', testContext.state, testContext.sampleRate);
-    testContext.close();
-  } catch (e) {
-    console.error(' AudioContext test failed:', e);
-  }
-}
 
 // Store user message in conversation data (accumulate in memory only)
 function storeUserMessage(text) {
@@ -2694,8 +2163,8 @@ function getCookie(name) {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Voice Chat App initializing...');
   
-  // Test audio system capabilities
-  testAudioSystem();
+  
+  
   
   const talkBtn = document.getElementById('talkBtn');
   
@@ -2768,3 +2237,5 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 {% endblock %}
+
+

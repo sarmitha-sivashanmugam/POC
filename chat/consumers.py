@@ -1,12 +1,12 @@
 import os
 import json
-import aiohttp
 import asyncio
 from datetime import datetime
 from channels.generic.websocket import AsyncWebsocketConsumer
 from google import genai
 from google.genai import types
 from . import constants
+from .tools_simplified import TOOL_DEFINITIONS, execute_tool
 from dotenv import load_dotenv
 
 
@@ -49,24 +49,8 @@ class VoiceChatConsumer(AsyncWebsocketConsumer):
         # Only process conversation if AI completed the consultation
         if self.conversation_data and self.conversation_data['messages']:
             # Check if AI said the completion message
-            ai_completed = False
-            for message in self.conversation_data['messages']:
-                if message.get('role') == 'ai':
-                    text = message.get('text', '').lower()
-                    if ('thank you for providing this information' in text or 
-                        'i have collected all the necessary details' in text):
-                        ai_completed = True
-                        break
-            
-            if ai_completed:
-                try:
-                    # Send to process-conversation API only if AI completed
-                    await self.send_conversation_to_api(self.conversation_data)
-                    print(f"Conversation data sent for processing: {self.conversation_data['id']}")
-                except Exception as e:
-                    print(f"Error sending conversation: {e}")
-            else:
-                print(f"Conversation not completed by AI - skipping processing: {self.conversation_data['id']}")
+            # Tool calling handles real-time recommendations - no post-processing needed
+            print(f"Tool calling handles real-time recommendations during conversation: {self.conversation_data['id']}")
         
         # Clean up the Gemini session when the client disconnects.
         if self.session and self.session_context:
@@ -99,17 +83,25 @@ class VoiceChatConsumer(AsyncWebsocketConsumer):
         # Conversation data is already initialized in connect()
         
         config = {
-            
+            "tools": TOOL_DEFINITIONS,  # Add tool schemas for function calling
             "generation_config": {"response_modalities": ["AUDIO"]},
             "enable_affective_dialog": True,
             "speech_config": {
                 "voice_config": {"prebuilt_voice_config": {"voice_name": "Zephyr"}},
             },
-             
-            "input_audio_transcription": {},  # Enable input transcription
+            
+            #"input_audio_transcription": {},  # Enable input transcription
             "output_audio_transcription": {},  # Enable output transcription
             "system_instruction": constants.AI_SYSTEM_INSTRUCTION,
         }
+        
+        print(f"TOOLS CONFIGURED: {len(TOOL_DEFINITIONS)} tools")
+        for i, tool in enumerate(TOOL_DEFINITIONS, 1):
+            if hasattr(tool, 'function_declarations'):
+                for func in tool.function_declarations:
+                    print(f"   {i}. {func.name}: {func.description}")
+                    print(f"      Required params: {func.parameters.required if hasattr(func.parameters, 'required') else 'None'}")
+                    print(f"      Properties: {list(func.parameters.properties.keys()) if hasattr(func.parameters, 'properties') else 'None'}")
         self.session_context = client.aio.live.connect(model=constants.GEMINI_MODEL_NAME, config=config)
         self.session = await self.session_context.__aenter__()
         
@@ -142,7 +134,23 @@ class VoiceChatConsumer(AsyncWebsocketConsumer):
                 # Continuously listen for new turns/responses
                 turn = self.session.receive()
                 async for response in turn:
-                    # Handle transcriptions from server_content
+                    # Handle tool calls from Gemini - CORRECTED FORMAT
+                    if response.tool_call:
+                        print(f"🔧 TOOL CALLS DETECTED: {len(response.tool_call.function_calls)}")
+                        await self.handle_tool_calls(response.tool_call)
+                    else:
+                        print(f"🔍 No tool calls in this response")
+                        # Debug: Check what response contains
+                        print(f"🔍 Response attributes: {dir(response)}")
+                        if hasattr(response, 'server_content'):
+                            print(f"🔍 Has server_content: {response.server_content}")
+                        
+                        # Check if there are any other tool call attributes
+                        for attr in dir(response):
+                            if 'tool' in attr.lower() or 'call' in attr.lower():
+                                print(f"🔍 Found tool-related attribute: {attr} = {getattr(response, attr, None)}")
+                    
+                    # Handle server content for transcriptions
                     if hasattr(response, 'server_content') and response.server_content:
                         server_content = response.server_content
                         
@@ -168,6 +176,12 @@ class VoiceChatConsumer(AsyncWebsocketConsumer):
                             if hasattr(server_content.output_transcription, 'text') and server_content.output_transcription.text:
                                 ai_text = server_content.output_transcription.text
                                 
+                                # Debug: Check if AI is mentioning products but not using tools
+                                if any(keyword in ai_text.lower() for keyword in ['product', 'mouthwash', 'toothpaste', 'toothbrush', 'recommend', 'suggest', 'looking', 'search']):
+                                    print(f"🤖 AI mentioned products but didn't use tools: '{ai_text}'")
+                                    print(f"🔍 This should trigger a tool call!")
+                                    print(f"🔍 AI should be calling find_products tool now!")
+                                
                                 # Store in conversation processor
                                 # Add AI message to conversation data
                                 self.conversation_data['messages'].append({
@@ -189,43 +203,106 @@ class VoiceChatConsumer(AsyncWebsocketConsumer):
             print(f"Gemini session error: {e}")
             pass
     
-    async def send_conversation_to_api(self, conversation_data):
-        """Send conversation data to the product recommendation API"""
+    async def handle_tool_calls(self, tool_calls):
+        """Handle tool calls from Gemini and execute them using proper Google Gemini API format."""
         try:
+            from google.genai import types
             
+            print("=" * 80)
+            print("🔧 TOOL CALL DETECTED - STARTING DEBUG SESSION")
+            print("=" * 80)
+            print(f"📊 Total function calls: {len(tool_calls.function_calls)}")
+            print(f"👤 User: {self.user.username if self.user else 'Anonymous'}")
+            print(f"🕐 Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print("-" * 80)
             
-            print("===== SENDING CONVERSATION TO API =====")
-            print(f"Conversation ID: {conversation_data['id']}")
-            print(f"Messages count: {len(conversation_data['messages'])}")
-            
-            # Send to conversation processing API
-            async with aiohttp.ClientSession() as session:
-                url = f"http://localhost:8000/api/process-conversation/"
-                payload = {
-                    'conversation': conversation_data
-                }
+            for i, function_call_obj in enumerate(tool_calls.function_calls, 1):
+                print(f"\n🔧 TOOL CALL #{i}")
+                print(f"   📛 Tool Name: {function_call_obj.name}")
+                print(f"   🆔 Function ID: {function_call_obj.id}")
+                print(f"   📋 Parameters: {json.dumps(function_call_obj.args, indent=2)}")
+                print(f"   📝 Parameter Count: {len(function_call_obj.args) if function_call_obj.args else 0}")
                 
-                async with session.post(url, json=payload) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        print("API processing successful:")
-                        print(f"Status: {result.get('success')}")
-                        if result.get('success') and 'result' in result:
-                            api_result = result['result']
-                            print(f"Patient info: {api_result.get('patient_info', {})}")
-                            print(f"Initial filtered products: {api_result.get('initial_filtered_count', 0)}")
-                            print(f"Final filtered products: {api_result.get('final_filtered_count', 0)}")
-                            print(f"Filtering applied: {api_result.get('filtering_applied', 'Unknown')}")
-                            
-                            # Send result to frontend to trigger cart addition
-                            await self.send(text_data=json.dumps({
-                                'type': 'llm_result',
-                                'result': api_result
-                            }))
-                            print("✅ LLM result sent to frontend for cart processing")
-                            
-                    else:
-                        print(f"❌ API error: {response.status}")
-                        
+                # Execute the tool with detailed logging
+                print(f"\n⚙️  EXECUTING TOOL: {function_call_obj.name}")
+                print("-" * 40)
+                
+                start_time = datetime.now()
+                result = await execute_tool(function_call_obj.name, function_call_obj.args, self.user)
+                end_time = datetime.now()
+                execution_time = (end_time - start_time).total_seconds()
+                
+                print(f"⏱️  Execution Time: {execution_time:.3f} seconds")
+                print(f"✅ Tool Execution Complete")
+                print(f"📊 Result Success: {result.get('success', False)}")
+                print(f"📈 Result Keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
+                
+                if result.get('success'):
+                    if 'products' in result:
+                        print(f"🛍️  Products Found: {result.get('count', 0)}")
+                        for j, product in enumerate(result.get('products', [])[:3], 1):
+                            print(f"   {j}. {product.get('name', 'Unknown')} - ${product.get('price', 0)}")
+                        if len(result.get('products', [])) > 3:
+                            print(f"   ... and {len(result.get('products', [])) - 3} more products")
+                    
+                    if 'added_items' in result:
+                        print(f"🛒 Items Added to Cart: {len(result.get('added_items', []))}")
+                        for item in result.get('added_items', []):
+                            print(f"   - {item.get('product_name', 'Unknown')} (x{item.get('quantity', 1)})")
+                    
+                    if 'cart' in result:
+                        cart = result.get('cart', {})
+                        print(f"🛒 Cart Summary:")
+                        print(f"   Total Items: {cart.get('total_items', 0)}")
+                        print(f"   Total Price: ${cart.get('total_price', 0)}")
+                else:
+                    print(f"❌ Tool Execution Failed: {result.get('error', 'Unknown error')}")
+                
+                print(f"\n📤 SENDING RESPONSE TO GEMINI")
+                print("-" * 40)
+                
+                # Create proper function response using Google Gemini API format
+                function_response = types.FunctionResponse(
+                    name=function_call_obj.name,
+                    response={"result": result},
+                    id=function_call_obj.id,
+                )
+                
+                print(f"📤 Function Response Created:")
+                print(f"   Name: {function_response.name}")
+                print(f"   ID: {function_response.id}")
+                print(f"   Response Size: {len(str(result))} characters")
+                
+                # Send tool result back to Gemini using proper API
+                await self.session.send_tool_response(
+                    function_responses=function_response
+                )
+                print(f"✅ Response sent to Gemini successfully")
+                
+                # Send tool result to frontend for real-time updates
+                await self.send(text_data=json.dumps({
+                    'type': 'tool_result',
+                    'tool_name': function_call_obj.name,
+                    'result': result
+                }))
+                print(f"📱 Frontend notification sent")
+                
+                print(f"\n✅ TOOL CALL #{i} COMPLETED SUCCESSFULLY")
+                print("=" * 80)
+                
         except Exception as e:
-            print(f"❌ Error sending to API: {e}")
+            print(f"\n❌ TOOL CALL ERROR")
+            print("=" * 80)
+            print(f"🚨 Error Type: {type(e).__name__}")
+            print(f"🚨 Error Message: {str(e)}")
+            print(f"🚨 Error Details: {repr(e)}")
+            import traceback
+            print(f"🚨 Traceback:")
+            traceback.print_exc()
+            print("=" * 80)
+            
+            # Send error back to Gemini
+            await self.session.send_realtime_input(
+                text=f"Tool execution error: {str(e)}"
+            )
+    

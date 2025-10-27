@@ -9,7 +9,6 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import UserProfile, Cart, Products
-from .llm_processor import LLMProcessor
 
 
 def login_view(request):
@@ -82,65 +81,6 @@ def dashboard(request):
         "websocket_host": settings.WEBSOCKET_HOST,
     }
     return render(request, "chat/dashboard.html", context)
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def process_conversation_with_llm(request):
-    """Process conversation with Gemini 2.5 Pro and extract patient information"""
-    print("===== DJANGO VIEW: PROCESS CONVERSATION =====")
-    print("Received request to process conversation with LLM")
-    
-    try:
-        data = json.loads(request.body)
-        conversation = data.get('conversation', {})
-        
-        print("===== CONVERSATION DATA RECEIVED =====")
-        print("Conversation ID:", conversation.get('id'))
-        print("Total messages:", len(conversation.get('messages', [])))
-        print("Conversation data:", json.dumps(conversation, indent=2))
-        
-        if not conversation or not conversation.get('messages'):
-            print("No conversation data provided")
-            return JsonResponse({
-                'success': False, 
-                'error': 'No conversation data provided'
-            }, status=400)
-        
-        # Check if messages array is empty
-        if len(conversation.get('messages', [])) == 0:
-            print("Empty messages array in conversation")
-            return JsonResponse({
-                'success': False, 
-                'error': 'Empty conversation messages'
-            }, status=400)
-        
-        print("Initializing LLM processor...")
-        # Initialize LLM processor
-        llm_processor = LLMProcessor()
-        
-        print("Processing conversation with second filtering...")
-        # Process conversation with enhanced second filtering
-        result = llm_processor.process_conversation_with_second_filter(conversation)
-        
-        print("===== PROCESSING COMPLETE =====")
-        print("Patient info:", json.dumps(result['patient_info'], indent=2))
-        print("Initial filtered products count:", result['initial_filtered_count'])
-        print("Final filtered products count:", result['final_filtered_count'])
-        print("Filtering applied:", result['filtering_applied'])
-        
-        return JsonResponse({
-            'success': True,
-            'result': result
-        })
-        
-    except Exception as e:
-        print("===== ERROR IN DJANGO VIEW =====")
-        print(f"Error processing conversation: {str(e)}")
-        return JsonResponse({
-            'success': False, 
-            'error': str(e)
-        }, status=500)
-
 
 @login_required
 def cart_view(request):
