@@ -688,7 +688,7 @@ async def get_cart_summary(user) -> Dict[str, Any]:
     
     try:
         print(f"   Fetching cart items for user...")
-        cart_items = await sync_to_async(list)(Cart.objects.filter(user=user))
+        cart_items = await sync_to_async(lambda: list(Cart.objects.filter(user=user).select_related('product')))()
         print(f"   Found {len(cart_items)} cart items")
         
         items = []
