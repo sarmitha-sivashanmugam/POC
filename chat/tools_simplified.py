@@ -114,23 +114,23 @@ async def execute_tool(tool_name: str, parameters: Dict[str, Any], user) -> Dict
     
     try:
         if tool_name == "find_products":
-            print(f"   🎯 Routing to find_products function")
+            print(f"   Routing to find_products function")
             result = await find_products(parameters)
-            print(f"   ✅ find_products completed")
+            print(f"   find_products completed")
             return result
         elif tool_name == "manage_cart":
-            print(f"   🎯 Routing to manage_cart function")
+            print(f"   Routing to manage_cart function")
             result = await manage_cart(parameters, user)
-            print(f"   ✅ manage_cart completed")
+            print(f"   manage_cart completed")
             return result
         else:
-            print(f"   ❌ Unknown tool: {tool_name}")
+            print(f"   Unknown tool: {tool_name}")
             return {
                 "success": False,
                 "error": f"Unknown tool: {tool_name}"
             }
     except Exception as e:
-        print(f"   🚨 Exception in execute_tool: {type(e).__name__}: {str(e)}")
+        print(f"   Exception in execute_tool: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         return {
@@ -144,14 +144,14 @@ async def execute_tool(tool_name: str, parameters: Dict[str, Any], user) -> Dict
 
 async def find_products(parameters: Dict[str, Any]) -> Dict[str, Any]:
     """Find products based on patient age, medical conditions, and category - matches database fields exactly."""
-    print(f"\n🔍 FIND_PRODUCTS DEBUG")
-    print(f"   📊 Input Parameters:")
+    print(f"\nFIND_PRODUCTS DEBUG")
+    print(f"   Input Parameters:")
     print(f"      Age: {parameters.get('age', 'Not provided')}")
     print(f"      Pregnancy: {parameters.get('pregnancy', False)}")
     print(f"      Orthodontics: {parameters.get('orthodontics', False)}")
     print(f"      Category: {parameters.get('category', 'Not provided')}")
     print(f"      Limit: {parameters.get('limit', 10)}")
-    print(f"   🔍 RAW PARAMETERS RECEIVED:")
+    print(f"   RAW PARAMETERS RECEIVED:")
     print(f"      {json.dumps(parameters, indent=2)}")
     
     try:
@@ -162,19 +162,19 @@ async def find_products(parameters: Dict[str, Any]) -> Dict[str, Any]:
         category = parameters.get("category")
         limit = parameters.get("limit", 10)
         
-        print(f"   ✅ PARAMETER VALIDATION:")
+        print(f"   PARAMETER VALIDATION:")
         print(f"      Age Range: {age_range} (type: {type(age_range)})")
         print(f"      Pregnancy: {pregnancy} (type: {type(pregnancy)})")
         print(f"      Orthodontics: {orthodontics} (type: {type(orthodontics)})")
         print(f"      Category: {category} (type: {type(category)})")
-        print(f"   🔍 MAPPING VERIFICATION:")
+        print(f"   MAPPING VERIFICATION:")
         print(f"      Age Range '{age_range}' → Database filter: {age_range}=True")
         print(f"      Orthodontics {orthodontics} → Database filter: orthodontics={orthodontics}")
         print(f"      Category '{category}' → Database filter: category__icontains='{category}'")
         
         # Validate age_range parameter
         if not age_range:
-            print(f"   ❌ ERROR: Age range parameter is missing!")
+            print(f"   ERROR: Age range parameter is missing!")
             return {
                 "success": False,
                 "error": "Age range parameter is required",
@@ -184,7 +184,7 @@ async def find_products(parameters: Dict[str, Any]) -> Dict[str, Any]:
         
         valid_age_ranges = ["teething_to_24_months", "age_2_to_5", "age_6_to_12", "age_13_and_above"]
         if age_range not in valid_age_ranges:
-            print(f"   ❌ ERROR: Invalid age range: {age_range}")
+            print(f"   ERROR: Invalid age range: {age_range}")
             return {
                 "success": False,
                 "error": f"Invalid age range: {age_range}. Must be one of: {valid_age_ranges}",
@@ -194,7 +194,7 @@ async def find_products(parameters: Dict[str, Any]) -> Dict[str, Any]:
         
         # Validate category parameter
         if not category:
-            print(f"   ❌ ERROR: Category parameter is missing!")
+            print(f"   ERROR: Category parameter is missing!")
             return {
                 "success": False,
                 "error": "Category parameter is required",
@@ -202,91 +202,91 @@ async def find_products(parameters: Dict[str, Any]) -> Dict[str, Any]:
                 "count": 0
             }
         
-        print(f"   ✅ All parameters validated successfully")
+        print(f"   All parameters validated successfully")
         
         # Build comprehensive query
-        print(f"   🔨 Building database query...")
+        print(f"   Building database query...")
         query = Q()
         
         # Age-based filtering - direct mapping
-        print(f"   👶 Age-based filtering for range: {age_range}")
+        print(f"   Age-based filtering for range: {age_range}")
         query &= Q(**{age_range: True})
         print(f"      → Added {age_range}=True filter")
         
         # Category filtering
         if category:
             query &= Q(category__icontains=category)
-            print(f"   📂 Category filtering: {category}")
+            print(f"   Category filtering: {category}")
         
         # Medical condition filtering
         if pregnancy:
             query &= Q(pregnancy=True)
-            print(f"   🤰 Pregnancy-safe filter added (pregnancy=True)")
+            print(f"   Pregnancy-safe filter added (pregnancy=True)")
         
         if orthodontics:
             query &= Q(orthodontics=True)
-            print(f"   🦷 Orthodontic-friendly filter added (orthodontics=True)")
+            print(f"   Orthodontic-friendly filter added (orthodontics=True)")
         
         # Execute query using simple database filtering
         
         # Execute query
-        print(f"   🚀 Executing database query...")
-        print(f"   📊 Query limit: {limit}")
-        print(f"   🔍 Final query filters:")
+        print(f"   Executing database query...")
+        print(f"   Query limit: {limit}")
+        print(f"   Final query filters:")
         print(f"      - Age range: {age_range}")
         print(f"      - Pregnancy: {pregnancy}")
         print(f"      - Orthodontics: {orthodontics}")
         print(f"      - Category: {category}")
         
         products = await sync_to_async(list)(Products.objects.filter(query)[:limit])
-        print(f"   📈 Products found: {len(products)}")
+        print(f"   Products found: {len(products)}")
         
         # Debug: Show what products were found
         if len(products) > 0:
-            print(f"   📋 Found products:")
+            print(f"   Found products:")
             for i, product in enumerate(products[:3], 1):
                 print(f"      {i}. {product.product_name} (age_6_to_12={product.age_6_to_12}, orthodontics={product.orthodontics})")
             if len(products) > 3:
                 print(f"      ... and {len(products) - 3} more products")
         else:
             # Debug: Check what products exist in database with these flags
-            print(f"   🔍 DEBUG: Checking database contents...")
+            print(f"   DEBUG: Checking database contents...")
             all_products = await sync_to_async(list)(Products.objects.all()[:10])
-            print(f"   📊 Total products in database: {len(all_products)}")
+            print(f"   Total products in database: {len(all_products)}")
             
             # Check products with age_6_to_12=True
             age_6_12_products = await sync_to_async(list)(Products.objects.filter(age_6_to_12=True)[:5])
-            print(f"   👶 Products with age_6_to_12=True: {len(age_6_12_products)}")
+            print(f"   Products with age_6_to_12=True: {len(age_6_12_products)}")
             for product in age_6_12_products:
                 print(f"      - {product.product_name} (orthodontics={product.orthodontics}, category={product.category})")
             
             # Check products with orthodontics=True
             ortho_products = await sync_to_async(list)(Products.objects.filter(orthodontics=True)[:5])
-            print(f"   🦷 Products with orthodontics=True: {len(ortho_products)}")
+            print(f"   Products with orthodontics=True: {len(ortho_products)}")
             for product in ortho_products:
                 print(f"      - {product.product_name} (age_6_to_12={product.age_6_to_12}, category={product.category})")
             
             # Check products with both age_6_to_12=True AND orthodontics=True
             both_products = await sync_to_async(list)(Products.objects.filter(age_6_to_12=True, orthodontics=True)[:5])
-            print(f"   🎯 Products with BOTH age_6_to_12=True AND orthodontics=True: {len(both_products)}")
+            print(f"   Products with BOTH age_6_to_12=True AND orthodontics=True: {len(both_products)}")
             for product in both_products:
                 print(f"      - {product.product_name} (category={product.category})")
         
         # Handle no products found
         if len(products) == 0:
-            print(f"   ❌ NO PRODUCTS FOUND!")
-            print(f"   🔍 Query details:")
+            print(f"   NO PRODUCTS FOUND!")
+            print(f"   Query details:")
             print(f"      Age Range: {age_range}")
             print(f"      Pregnancy: {pregnancy}")
             print(f"      Orthodontics: {orthodontics}")
             print(f"      Category: {category}")
             
             # Try different filter combinations
-            print(f"   🔄 Trying different filter combinations...")
+            print(f"   Trying different filter combinations...")
             
             # Strategy 1: Try without orthodontics filter
             if orthodontics:
-                print(f"   🔄 Strategy 1: Trying without orthodontics filter...")
+                print(f"   Strategy 1: Trying without orthodontics filter...")
                 fallback_query = Q()
                 fallback_query &= Q(**{age_range: True})
                 
@@ -297,15 +297,15 @@ async def find_products(parameters: Dict[str, Any]) -> Dict[str, Any]:
                 
                 fallback_products = await sync_to_async(list)(Products.objects.filter(fallback_query)[:limit])
                 if len(fallback_products) > 0:
-                    print(f"   ✅ Found {len(fallback_products)} products without orthodontics filter")
+                    print(f"   Found {len(fallback_products)} products without orthodontics filter")
                     products = fallback_products
-                    print(f"   📋 Found products (without orthodontics filter):")
+                    print(f"   Found products (without orthodontics filter):")
                     for i, product in enumerate(fallback_products[:3], 1):
                         print(f"      {i}. {product.product_name} (age_6_to_12={product.age_6_to_12}, orthodontics={product.orthodontics})")
             
             # Strategy 2: Try alternative categories
             if len(products) == 0:
-                print(f"   🔄 Strategy 2: Trying alternative categories...")
+                print(f"   Strategy 2: Trying alternative categories...")
                 alternative_categories = []
                 if category.lower() == "toothpaste":
                     alternative_categories = ["Toothbrush", "Mouthwash"]
@@ -316,7 +316,7 @@ async def find_products(parameters: Dict[str, Any]) -> Dict[str, Any]:
                 else:
                     alternative_categories = ["Toothpaste", "Toothbrush", "Mouthwash"]
                 
-                print(f"   🔄 Trying alternative categories: {alternative_categories}")
+                print(f"   Trying alternative categories: {alternative_categories}")
                 
                 # Try each alternative category
                 for alt_category in alternative_categories:
@@ -331,14 +331,14 @@ async def find_products(parameters: Dict[str, Any]) -> Dict[str, Any]:
                     # Try without orthodontics filter for alternative categories
                     alt_products = await sync_to_async(list)(Products.objects.filter(alt_query)[:limit])
                     if len(alt_products) > 0:
-                        print(f"   ✅ Found {len(alt_products)} products in alternative category: {alt_category}")
+                        print(f"   Found {len(alt_products)} products in alternative category: {alt_category}")
                         products = alt_products
                         category = alt_category
                         break
             
             # Strategy 3: Try with any age range
             if len(products) == 0:
-                print(f"   🔄 Strategy 3: Trying with any age range...")
+                print(f"   Strategy 3: Trying with any age range...")
                 any_age_query = Q(category__icontains=category)
                 if pregnancy:
                     any_age_query &= Q(pregnancy=True)
@@ -347,7 +347,7 @@ async def find_products(parameters: Dict[str, Any]) -> Dict[str, Any]:
                 
                 any_age_products = await sync_to_async(list)(Products.objects.filter(any_age_query)[:limit])
                 if len(any_age_products) > 0:
-                    print(f"   ✅ Found {len(any_age_products)} products with any age range")
+                    print(f"   Found {len(any_age_products)} products with any age range")
                     products = any_age_products
             
             # If still no products found, return error with suggestions
@@ -361,7 +361,7 @@ async def find_products(parameters: Dict[str, Any]) -> Dict[str, Any]:
                 }
         
         # Format results
-        print(f"   📝 Formatting {len(products)} products...")
+        print(f"   Formatting {len(products)} products...")
         results = []
         for i, product in enumerate(products, 1):
             product_data = {
@@ -395,14 +395,14 @@ async def find_products(parameters: Dict[str, Any]) -> Dict[str, Any]:
             }
         }
         
-        print(f"   ✅ find_products result:")
+        print(f"   find_products result:")
         print(f"      Success: {result['success']}")
         print(f"      Products: {result['count']}")
         
         return result
         
     except Exception as e:
-        print(f"   🚨 Exception in find_products: {type(e).__name__}: {str(e)}")
+        print(f"   Exception in find_products: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         return {
@@ -413,12 +413,12 @@ async def find_products(parameters: Dict[str, Any]) -> Dict[str, Any]:
 
 async def manage_cart(parameters: Dict[str, Any], user) -> Dict[str, Any]:
     """Manage cart operations - add products or get summary."""
-    print(f"\n🛒 MANAGE_CART DEBUG")
-    print(f"   📊 Input Parameters:")
+    print(f"\nMANAGE_CART DEBUG")
+    print(f"   Input Parameters:")
     print(f"      Action: {parameters.get('action', 'Not provided')}")
     print(f"      Products: {parameters.get('products', [])}")
-    print(f"   👤 User: {user.username if user else 'Anonymous'}")
-    print(f"   🔍 RAW PARAMETERS RECEIVED:")
+    print(f"   User: {user.username if user else 'Anonymous'}")
+    print(f"    RAW PARAMETERS RECEIVED:")
     print(f"      {json.dumps(parameters, indent=2)}")
     
     try:
@@ -439,40 +439,40 @@ async def manage_cart(parameters: Dict[str, Any], user) -> Dict[str, Any]:
                 "error": f"Invalid action: {action}. Must be 'add' or 'get_summary'"
             }
         
-        print(f"   ✅ Action parameter validated: {action}")
+        print(f"   Action parameter validated: {action}")
         
         if action == "add":
-            print(f"   🎯 Routing to add_to_cart function")
+            print(f"   Routing to add_to_cart function")
             products_to_add = parameters.get("products", [])
-            print(f"   📦 Products to add: {len(products_to_add)}")
-            print(f"   📋 Products details:")
+            print(f"   Products to add: {len(products_to_add)}")
+            print(f"   Products details:")
             for i, product in enumerate(products_to_add, 1):
                 print(f"      {i}. Name: '{product.get('name', 'MISSING')}', Quantity: {product.get('quantity', 'MISSING')}")
             
             if not products_to_add:
-                print(f"   ❌ ERROR: No products provided for cart addition!")
+                print(f"   ERROR: No products provided for cart addition!")
                 return {
                     "success": False,
                     "error": "No products provided for cart addition"
                 }
             
             result = await add_to_cart(products_to_add, user)
-            print(f"   ✅ add_to_cart completed")
+            print(f"   add_to_cart completed")
             return result
         elif action == "get_summary":
-            print(f"   🎯 Routing to get_cart_summary function")
+            print(f"   Routing to get_cart_summary function")
             result = await get_cart_summary(user)
-            print(f"   ✅ get_cart_summary completed")
+            print(f"   get_cart_summary completed")
             return result
         else:
-            print(f"   ❌ Invalid action: {action}")
+            print(f"   Invalid action: {action}")
             return {
                 "success": False,
                 "error": f"Invalid action: {action}"
             }
             
     except Exception as e:
-        print(f"   🚨 Exception in manage_cart: {type(e).__name__}: {str(e)}")
+        print(f"   Exception in manage_cart: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         return {
@@ -483,9 +483,9 @@ async def manage_cart(parameters: Dict[str, Any], user) -> Dict[str, Any]:
 
 async def add_to_cart(products_to_add: List[Dict], user) -> Dict[str, Any]:
     """Add products to user's cart."""
-    print(f"\n🛒 ADD_TO_CART DEBUG")
-    print(f"   📦 Products to add: {len(products_to_add)}")
-    print(f"   👤 User: {user.username if user else 'Anonymous'}")
+    print(f"\nADD_TO_CART DEBUG")
+    print(f"    Products to add: {len(products_to_add)}")
+    print(f"   User: {user.username if user else 'Anonymous'}")
     
     try:
         # Validate user
@@ -515,7 +515,7 @@ async def add_to_cart(products_to_add: List[Dict], user) -> Dict[str, Any]:
         errors = []
         
         for i, product_data in enumerate(products_to_add, 1):
-            print(f"   📦 Processing product {i}/{len(products_to_add)}: {product_data}")
+            print(f"    Processing product {i}/{len(products_to_add)}: {product_data}")
             
             # Validate product data structure
             if not isinstance(product_data, dict):
@@ -526,7 +526,7 @@ async def add_to_cart(products_to_add: List[Dict], user) -> Dict[str, Any]:
             product_name = product_data.get("name", "").strip()
             quantity = product_data.get("quantity", 1)
             
-            print(f"      📝 Product name: '{product_name}', Quantity: {quantity}")
+            print(f"      Product name: '{product_name}', Quantity: {quantity}")
             
             # Validate product name
             if not product_name:
@@ -559,7 +559,7 @@ async def add_to_cart(products_to_add: List[Dict], user) -> Dict[str, Any]:
             
             try:
                 # Find the product with flexible matching
-                print(f"      🔍 Searching for product: {product_name}")
+                print(f"      Searching for product: {product_name}")
                 
                 # Try exact match first
                 try:
@@ -567,14 +567,14 @@ async def add_to_cart(products_to_add: List[Dict], user) -> Dict[str, Any]:
                     print(f"      ✅ Exact match found: {product.product_name} (ID: {product.id})")
                 except Products.DoesNotExist:
                     # Try case-insensitive contains match
-                    print(f"      🔍 Trying partial match for: {product_name}")
+                    print(f"      Trying partial match for: {product_name}")
                     products = await sync_to_async(list)(Products.objects.filter(product_name__icontains=product_name))
                     if len(products) == 1:
                         product = products[0]
                         print(f"      ✅ Partial match found: {product.product_name} (ID: {product.id})")
                     elif len(products) > 1:
                         # Multiple matches - try to find the best one
-                        print(f"      🔍 Multiple matches found ({len(products)}), selecting best match")
+                        print(f"      Multiple matches found ({len(products)}), selecting best match")
                         # Find the one with the most similar name
                         best_match = None
                         best_score = 0
@@ -594,7 +594,7 @@ async def add_to_cart(products_to_add: List[Dict], user) -> Dict[str, Any]:
                         raise Products.DoesNotExist(f"No products found matching '{product_name}'")
                 
                 # Add or update cart item
-                print(f"      🛒 Adding to cart...")
+                print(f"      Adding to cart...")
                 try:
                     cart_item, created = await sync_to_async(Cart.objects.get_or_create)(
                         user=user,
@@ -604,12 +604,12 @@ async def add_to_cart(products_to_add: List[Dict], user) -> Dict[str, Any]:
                     
                     if not created:
                         # Update quantity if item already exists
-                        print(f"      📈 Updating existing cart item (was {cart_item.quantity}, adding {quantity})")
+                        print(f"       Updating existing cart item (was {cart_item.quantity}, adding {quantity})")
                         cart_item.quantity += quantity
                         await sync_to_async(cart_item.save)()
-                        print(f"      ✅ Updated existing cart item")
+                        print(f"      Updated existing cart item")
                     else:
-                        print(f"      ✨ Created new cart item")
+                        print(f"      Created new cart item")
                     
                     # Calculate total price
                     total_price = float(cart_item.quantity * product.price)
@@ -623,7 +623,7 @@ async def add_to_cart(products_to_add: List[Dict], user) -> Dict[str, Any]:
                     print(f"      ✅ Successfully added: {product.product_name} (total qty: {cart_item.quantity}, total price: ${total_price})")
                     
                 except Exception as cart_error:
-                    print(f"      🚨 Error creating/updating cart item: {str(cart_error)}")
+                    print(f"       Error creating/updating cart item: {str(cart_error)}")
                     errors.append(f"Error adding '{product_name}' to cart: {str(cart_error)}")
                     continue
                 
@@ -631,7 +631,7 @@ async def add_to_cart(products_to_add: List[Dict], user) -> Dict[str, Any]:
                 print(f"      ❌ Product not found: {product_name}")
                 errors.append(f"Product '{product_name}' not found")
             except Exception as e:
-                print(f"      🚨 Error adding product: {str(e)}")
+                print(f"       Error adding product: {str(e)}")
                 errors.append(f"Error adding '{product_name}': {str(e)}")
         
         # Calculate totals
@@ -672,7 +672,7 @@ async def add_to_cart(products_to_add: List[Dict], user) -> Dict[str, Any]:
         return result
         
     except Exception as e:
-        print(f"   🚨 Exception in add_to_cart: {type(e).__name__}: {str(e)}")
+        print(f"   Exception in add_to_cart: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         return {
@@ -683,13 +683,13 @@ async def add_to_cart(products_to_add: List[Dict], user) -> Dict[str, Any]:
 
 async def get_cart_summary(user) -> Dict[str, Any]:
     """Get current cart contents and summary."""
-    print(f"\n🛒 GET_CART_SUMMARY DEBUG")
-    print(f"   👤 User: {user.username if user else 'Anonymous'}")
+    print(f"\nGET_CART_SUMMARY DEBUG")
+    print(f"   User: {user.username if user else 'Anonymous'}")
     
     try:
-        print(f"   🔍 Fetching cart items for user...")
+        print(f"   Fetching cart items for user...")
         cart_items = await sync_to_async(list)(Cart.objects.filter(user=user))
-        print(f"   📦 Found {len(cart_items)} cart items")
+        print(f"   Found {len(cart_items)} cart items")
         
         items = []
         total_price = 0
