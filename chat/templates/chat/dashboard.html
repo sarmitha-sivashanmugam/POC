@@ -314,7 +314,6 @@
 
     .message-item.user-message {
         justify-content: flex-end;
-        display: none !important; /* Hide user messages */
     }
 
     @keyframes slideInMessage {
@@ -419,13 +418,113 @@
     }
 
 
-    /* User text styles removed - user messages are hidden */
+    /* User Message Styles - Plain Text */
+    .user-bubble {
+        background: transparent;
+        color: #2c3e50;
+        padding: 0;
+        border-radius: 0;
+        box-shadow: none;
+        max-width: 85%;
+        position: relative;
+        animation: slideInFromRight 0.4s ease-out;
+        transition: all 0.2s ease;
+        text-align: right;
+    }
 
-    /* User message styles removed - user messages are hidden */
+    .user-bubble:hover {
+        box-shadow: none;
+    }
 
-    /* User bubble styles removed - user messages are hidden */
+    .user-text {
+        font-size: 1rem;
+        line-height: 1.6;
+        margin: 0;
+        font-weight: 400;
+        text-shadow: none;
+        position: relative;
+        z-index: 2;
+        transition: color 0.3s ease;
+    }
 
-    /* User animations removed - user messages are hidden */
+    .user-text.interim {
+        color: #9ca3af; /* Grey for interim results */
+    }
+
+    .user-text.final {
+        color: #2c3e50; /* Black for final text */
+    }
+
+    /* AI Thinking Indicator */
+    .ai-thinking {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 0;
+        color: #6b7280;
+        font-size: 0.9rem;
+        font-style: italic;
+        animation: fadeIn 0.3s ease;
+        margin-bottom: 10px;
+        text-align: left;
+    }
+
+    .ai-thinking.hidden {
+        display: none;
+    }
+
+    .ai-thinking-dots {
+        display: inline-block;
+        position: relative;
+        width: 20px;
+        height: 10px;
+    }
+
+    .ai-thinking-dots span {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #6b7280;
+        animation: thinkingDots 1.4s infinite ease-in-out;
+    }
+
+    .ai-thinking-dots span:nth-child(1) {
+        left: 0;
+        animation-delay: -0.32s;
+    }
+
+    .ai-thinking-dots span:nth-child(2) {
+        left: 8px;
+        animation-delay: -0.16s;
+    }
+
+    .ai-thinking-dots span:nth-child(3) {
+        left: 16px;
+        animation-delay: 0s;
+    }
+
+    @keyframes thinkingDots {
+        0%, 80%, 100% {
+            transform: scale(0.8);
+            opacity: 0.5;
+        }
+        40% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideInFromRight {
+        from { 
+            transform: translateX(20px); 
+            opacity: 0; 
+        }
+        to { 
+            transform: translateX(0); 
+            opacity: 1; 
+        }
+    }
 
     @keyframes slideInFromLeft {
         from { 
@@ -1318,13 +1417,19 @@ let currentAIMessage = null;
     let isAIResponding = false;
     let userMessageBuffer = '';
     let isUserTyping = false;
+    let aiThinkingIndicator = null;
+    let pendingInterimText = '';
+    let pendingFinalText = '';
 
 // Audio processing variables 
 let audioContext;
-let microphone;
-let processor;
 let audioQueue = [];
 let isPlaying = false;
+
+// Web Speech API variables
+let recognition = null;
+let isWebSpeechActive = false;
+let currentSpeechText = '';
 
 // Conversation storage variables
 let conversationData = {
@@ -1332,42 +1437,6 @@ let conversationData = {
     timestamp: new Date().toISOString(),
     messages: []
 };
-
-// Convert Float32Array to 16-bit PCM 
-function floatTo16BitPCM(float32Array) {
-    const buffer = new ArrayBuffer(float32Array.length * 2);
-    const view = new DataView(buffer);
-    let offset = 0;
-    for (let i = 0; i < float32Array.length; i++, offset += 2) {
-        let s = Math.max(-1, Math.min(1, float32Array[i]));
-        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-    }
-    return buffer;
-}
-
-// Resample audio from source rate to 16kHz 
-function resampleTo16kHz(audioBuffer, sourceSampleRate) {
-    if (sourceSampleRate === 16000) {
-        return audioBuffer;
-    }
-    const ratio = sourceSampleRate / 16000;
-    const newLength = Math.round(audioBuffer.length / ratio);
-    const result = new Float32Array(newLength);
-    let offsetResult = 0;
-    let offsetBuffer = 0;
-    while (offsetResult < result.length) {
-        const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
-        let accum = 0, count = 0;
-        for (let i = offsetBuffer; i < nextOffsetBuffer && i < audioBuffer.length; i++) {
-            accum += audioBuffer[i];
-            count++;
-        }
-        result[offsetResult] = accum / count;
-        offsetResult++;
-        offsetBuffer = nextOffsetBuffer;
-    }
-    return result;
-}
 
 // Audio playback functions 
 async function playNextInQueue() {
@@ -1397,7 +1466,15 @@ async function playNextInQueue() {
         source.onended = () => {
             console.log('🎵 Audio playback ended');
             isPlaying = false;
+            // Resume Web Speech API when audio playback ends (only if queue is empty)
+            // Check queue length after attempting to play next
             playNextInQueue();
+            // Resume after a small delay to ensure queue is processed
+            setTimeout(() => {
+                if (audioQueue.length === 0 && isRecording && !isPaused && !isWebSpeechActive) {
+                    resumeWebSpeechAPI();
+                }
+            }, 100);
         };
         
         console.log('Starting audio playback...');
@@ -1408,6 +1485,224 @@ async function playNextInQueue() {
         console.error("Error playing audio:", e);
         isPlaying = false;
         playNextInQueue();
+    }
+}
+
+// Web Speech API Functions
+function initializeWebSpeechAPI() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        console.error('Web Speech API not supported in this browser');
+        return null;
+    }
+    
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    
+    recognition.lang = 'en-US'; // English only
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    
+    recognition.onstart = () => {
+        console.log('🎤 Web Speech API started');
+        isWebSpeechActive = true;
+        // Clear previous user message when starting new recognition
+        currentSpeechText = '';
+        pendingInterimText = '';
+        pendingFinalText = '';
+        if (currentUserMessage) {
+            currentUserMessage = null;
+        }
+    };
+    
+    recognition.onresult = (event) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+                finalTranscript += transcript + ' ';
+                // Accumulate final text
+                pendingFinalText += transcript + ' ';
+            } else {
+                interimTranscript += transcript;
+            }
+        }
+        
+        // Update pending transcripts
+        pendingFinalText = pendingFinalText.trim();
+        pendingInterimText = interimTranscript.trim();
+        
+        // Update user message display with interim and final results
+        if (pendingInterimText || pendingFinalText) {
+            const displayText = (pendingFinalText + ' ' + pendingInterimText).trim();
+            currentSpeechText = displayText;
+            
+            // Create or update user message bubble
+            if (!currentUserMessage) {
+                currentUserMessage = createMessageBubble('user', '');
+                const historyContainer = document.getElementById('conversationHistory');
+                if (historyContainer) {
+                    historyContainer.appendChild(currentUserMessage);
+                }
+            }
+            
+            const textElement = currentUserMessage.querySelector('.user-text');
+            if (textElement) {
+                textElement.textContent = displayText;
+                
+                // Apply styling based on what we have
+                if (pendingInterimText && !pendingFinalText) {
+                    // Only interim results - show in grey
+                    textElement.classList.remove('final');
+                    textElement.classList.add('interim');
+                } else if (pendingFinalText) {
+                    // Has final results - show in black (final text stays black)
+                    textElement.classList.remove('interim');
+                    textElement.classList.add('final');
+                }
+            }
+            
+            scrollToBottom();
+        }
+        
+        // Send final transcript to Gemini
+        if (finalTranscript.trim()) {
+            console.log('📤 Sending text to Gemini:', finalTranscript.trim());
+            sendTextToGemini(finalTranscript.trim());
+            // Show thinking indicator
+            showAIThinking();
+        }
+    };
+    
+    recognition.onerror = (event) => {
+        console.error('Web Speech API error:', event.error);
+        if (event.error === 'no-speech') {
+            // This is normal - just restart if we're still recording
+            if (isRecording && !isPaused) {
+                setTimeout(() => {
+                    if (isRecording && !isPaused) {
+                        resumeWebSpeechAPI();
+                    }
+                }, 1000);
+            }
+        } else if (event.error === 'audio-capture') {
+            updateStatus('Microphone not found. Please check your microphone.');
+        } else if (event.error === 'not-allowed') {
+            updateStatus('Microphone permission denied. Please allow microphone access.');
+        }
+    };
+    
+    recognition.onend = () => {
+        console.log('🎤 Web Speech API ended');
+        isWebSpeechActive = false;
+        // Auto-restart if still recording
+        if (isRecording && !isPaused) {
+            setTimeout(() => {
+                if (isRecording && !isPaused) {
+                    resumeWebSpeechAPI();
+                }
+            }, 500);
+        }
+    };
+    
+    return recognition;
+}
+
+function pauseWebSpeechAPI() {
+    if (recognition && isWebSpeechActive) {
+        console.log('⏸️ Pausing Web Speech API');
+        recognition.stop();
+        isWebSpeechActive = false;
+    }
+}
+
+function resumeWebSpeechAPI() {
+    if (!recognition) {
+        console.warn('Cannot resume Web Speech API - recognition not initialized');
+        return;
+    }
+    
+    if (!isWebSpeechActive && isRecording && !isPaused) {
+        console.log('▶️ Resuming Web Speech API');
+        try {
+            recognition.start();
+            // Don't set isWebSpeechActive here - let onstart event handle it
+        } catch (e) {
+            // If already started, ignore error
+            if (e.name === 'InvalidStateError') {
+                console.log('Web Speech API already started');
+                isWebSpeechActive = true;
+            } else {
+                console.error('Error resuming Web Speech API:', e);
+            }
+        }
+    }
+}
+
+function sendTextToGemini(text) {
+    if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+        console.warn('Cannot send text - WebSocket not open');
+        return;
+    }
+    
+    if (!text.trim()) {
+        console.warn('Cannot send empty text');
+        return;
+    }
+    
+    try {
+        const message = JSON.stringify({
+            type: 'text_input',
+            text: text.trim()
+        });
+        websocket.send(message);
+        console.log('✅ Text sent to Gemini:', text.trim());
+        
+        // Store user message
+        storeUserMessage(text.trim());
+        
+        // Show thinking indicator
+        showAIThinking();
+        
+        // Keep currentUserMessage visible - don't clear it immediately
+        // It will be cleared when a new speech recognition starts
+    } catch (error) {
+        console.error('Error sending text to Gemini:', error);
+    }
+}
+
+// Show AI thinking indicator
+function showAIThinking() {
+    if (aiThinkingIndicator) {
+        return; // Already showing
+    }
+    
+    const historyContainer = document.getElementById('conversationHistory');
+    if (!historyContainer) return;
+    
+    // Create thinking indicator
+    const thinkingDiv = document.createElement('div');
+    thinkingDiv.className = 'ai-thinking';
+    thinkingDiv.innerHTML = `
+        <span>SuperMouth AI thinking</span>
+        <div class="ai-thinking-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    `;
+    
+    historyContainer.appendChild(thinkingDiv);
+    aiThinkingIndicator = thinkingDiv;
+    scrollToBottom();
+}
+
+// Hide AI thinking indicator
+function hideAIThinking() {
+    if (aiThinkingIndicator) {
+        aiThinkingIndicator.remove();
+        aiThinkingIndicator = null;
     }
 }
 
@@ -1459,15 +1754,18 @@ async function startConversation() {
     // Connect to WebSocket
     await connectWebSocket();
     
-    // Start microphone recording
-    await startMicrophone();
+    // Initialize Web Speech API
+    initializeWebSpeechAPI();
     
     // Initialize conversation data
     initializeConversation();
     
     isRecording = true;
     updateStatus('Listening... Speak now');
-    console.log("Conversation started successfully");
+    
+    // Wait for backend signal to start Web Speech API
+    // Backend will send 'start_speech_recognition' message after greeting
+    console.log("Conversation started successfully - waiting for backend signal");
     
   } catch (error) {
     console.error('Failed to start conversation:', error);
@@ -1479,8 +1777,9 @@ async function startConversation() {
 // Connect to WebSocket 
 function connectWebSocket() {
   return new Promise((resolve, reject) => {
-    // Use the same WebSocket URL format 
-    const wsUrl = `ws://${window.location.host}/ws/voice/`;
+    // Use appropriate WebSocket protocol based on current page protocol
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/voice/`;
     
     console.log(' Connecting to WebSocket:', wsUrl);
     console.log(' Current location:', window.location.href);
@@ -1541,14 +1840,12 @@ async function checkMicrophonePermission() {
   }
 }
 
-// Start microphone recording 
-async function startMicrophone() {
+// Initialize audio context for playback only
+async function initializeAudioContext() {
   try {
-    console.log(' Requesting microphone access...');
-    
     // Initialize audio context if not already done
     if (!audioContext) {
-      console.log(' Creating new AudioContext...');
+      console.log(' Creating new AudioContext for playback...');
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
       console.log(' AudioContext created:', audioContext.state, 'sample rate:', audioContext.sampleRate);
     }
@@ -1559,67 +1856,16 @@ async function startMicrophone() {
       await audioContext.resume();
       console.log(' AudioContext resumed:', audioContext.state);
     }
-
-    console.log(' Requesting media stream...');
-    const stream = await navigator.mediaDevices.getUserMedia({ 
-      audio: {
-        sampleRate: 16000,
-        channelCount: 1,
-        echoCancellation: true,
-        noiseSuppression: true
-      }
-    });
     
-    console.log(' Microphone access granted');
-    console.log(' Stream tracks:', stream.getTracks().length);
-    console.log(' Audio tracks:', stream.getAudioTracks().length);
-    
-    microphone = audioContext.createMediaStreamSource(stream);
-    processor = audioContext.createScriptProcessor(4096, 1, 1);
-    
-    console.log(' Audio processor created');
-
-    processor.onaudioprocess = (e) => {
-      if (websocket && websocket.readyState === WebSocket.OPEN && isRecording) {
-        const inputData = e.inputBuffer.getChannelData(0);
-        console.log('Processing audio chunk:', inputData.length, 'samples');
-        console.log('Input level:', Math.max(...inputData.map(Math.abs)));
-        
-        const resampled = resampleTo16kHz(inputData, audioContext.sampleRate);
-        const pcmData = floatTo16BitPCM(resampled);
-        
-        console.log('Sending audio data:', pcmData.byteLength, 'bytes');
-        websocket.send(pcmData);
-      } else {
-        console.log(' Not sending audio - websocket:', !!websocket, 'readyState:', websocket?.readyState, 'isRecording:', isRecording);
-      }
-    };
-
-    microphone.connect(processor);
-    processor.connect(audioContext.destination);
-    
-    console.log('Microphone recording started with Web Audio API');
-    console.log('AudioContext state:', audioContext.state);
-    
+    return true;
   } catch (error) {
-    console.error('Microphone access denied:', error);
-    
-    // Show user-friendly error message
-    updateStatus('Microphone access denied. Please allow microphone access and try again.');
-    
-    // Reset button state
-    isRecording = false;
-    updateButtonStates('stopped');
-    
-    // Show permission instructions
-    alert('Microphone access is required for voice chat.\n\nPlease:\n1. Click the microphone icon in your browser\'s address bar\n2. Allow microphone access\n3. Refresh the page and try again');
-    
-    throw new Error('Microphone access required for voice chat');
+    console.error('Error initializing audio context:', error);
+    return false;
   }
 }
 
 // Handle WebSocket messages from backend 
-function handleWebSocketMessage(event) {
+async function handleWebSocketMessage(event) {
   console.log('WebSocket message received:', event.data);
   console.log('Data type:', typeof event.data);
   console.log('Is ArrayBuffer:', event.data instanceof ArrayBuffer);
@@ -1632,57 +1878,17 @@ function handleWebSocketMessage(event) {
     const data = JSON.parse(event.data);
       console.log('Parsed data:', data);
     
-    if (data.type === 'user_transcript') {
-        console.log(' User transcript:', data.text);
-        
-        // Mark user as typing
-        if (!isUserTyping) {
-          isUserTyping = true;
-        }
-        
-        // Accumulate user message chunks
-        userMessageBuffer += data.text;
-        
-        // Create or update user message
-        if (!currentUserMessage) {
-          currentUserMessage = createMessageBubble('user', '');
-          const historyContainer = document.getElementById('conversationHistory');
-          if (historyContainer) {
-            historyContainer.appendChild(currentUserMessage);
-          }
-        }
-        
-        // Update the display with the accumulated text
-        const textElement = currentUserMessage.querySelector('.user-text');
-        if (textElement) {
-          // Add smooth text transition
-          textElement.style.transition = 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-          textElement.textContent = userMessageBuffer;
-          
-          // Add a subtle animation to show the text is updating
-          textElement.style.transform = 'scale(1.01)';
-          setTimeout(() => {
-            textElement.style.transform = 'scale(1)';
-          }, 100);
-        }
-        
-        scrollToBottom();
-        
-        // Check if this might be the end of the user response
-        clearTimeout(window.userResponseTimeout);
-        window.userResponseTimeout = setTimeout(() => {
-          if (isUserTyping) {
-            console.log(' User response complete:', userMessageBuffer);
-            
-            // Store the complete user message
-            storeUserMessage(userMessageBuffer);
-            
-            // Reset user response state
-            currentUserMessage = null;
-            isUserTyping = false;
-            userMessageBuffer = '';
-          }
-        }, 2000); // Wait 2 seconds after last chunk
+    if (data.type === 'start_speech_recognition') {
+        console.log('🎤 Starting Web Speech API from backend signal');
+        // Initialize audio context for playback
+        await initializeAudioContext();
+        // Start Web Speech API
+        resumeWebSpeechAPI();
+    } else if (data.type === 'user_transcript') {
+        // Note: user_transcript from backend is deprecated - we use Web Speech API now
+        // Keeping this for backwards compatibility but should not be used
+        console.log(' User transcript from backend (deprecated):', data.text);
+        // This code path is not used since we capture user speech via Web Speech API
         
     } else if (data.type === 'llm_result') {
         console.log('===== LLM RESULT RECEIVED FROM WEBSOCKET =====');
@@ -1694,14 +1900,24 @@ function handleWebSocketMessage(event) {
     } else if (data.type === 'ai_transcript') {
         console.log('AI transcript chunk:', data.text);
         
+        // Hide thinking indicator when AI starts responding
+        if (!isAIResponding) {
+          hideAIThinking();
+          pauseWebSpeechAPI();
+        }
+        
         // Mark AI as responding
         if (!isAIResponding) {
           isAIResponding = true;
           isAITyping = true;
         }
         
-        // Accumulate AI message chunks
-        aiMessageBuffer += data.text;
+        // Accumulate AI message chunks with space between chunks
+        if (aiMessageBuffer) {
+          aiMessageBuffer += ' ' + data.text;
+        } else {
+          aiMessageBuffer += data.text;
+        }
         
         // Create or update AI message
         if (!currentAIMessage) {
@@ -1765,16 +1981,19 @@ function handleWebSocketMessage(event) {
                   websocket = null;
                 }
                 
-                // Stop microphone and audio resources
-                if (microphone) {
-                  microphone.disconnect();
-                  processor.disconnect();
-                  microphone.mediaStream.getTracks().forEach(track => track.stop());
-                  microphone = null;
-                  processor = null;
+                // Stop Web Speech API
+                pauseWebSpeechAPI();
+                if (recognition) {
+                  recognition.abort();
+                  recognition = null;
                 }
                 
-                
+                // Clean up audio resources
+                if (audioContext && audioContext.state !== 'closed') {
+                  audioContext.close().catch(console.error);
+                }
+                audioQueue = [];
+                isPlaying = false;
 
                 window.location.href = '/cart/';
                 
@@ -1796,6 +2015,11 @@ function handleWebSocketMessage(event) {
       console.log('Audio queue length before:', audioQueue.length);
       console.log('Is playing:', isPlaying);
       console.log('Audio context exists:', !!audioContext);
+      
+      // Pause Web Speech API when audio starts playing
+      if (!isPlaying) {
+        pauseWebSpeechAPI();
+      }
       
       audioQueue.push(event.data);
       console.log('Audio queue length after:', audioQueue.length);
@@ -1866,14 +2090,8 @@ async function pauseConversation() {
     isPaused = true;
     isRecording = false;
     
-    // Stop microphone but keep WebSocket and session alive
-    if (microphone) {
-      microphone.disconnect();
-      processor.disconnect();
-      microphone.mediaStream.getTracks().forEach(track => track.stop());
-      microphone = null;
-      processor = null;
-    }
+    // Pause Web Speech API
+    pauseWebSpeechAPI();
     
     // Keep WebSocket connection alive - don't close it!
     // websocket stays connected
@@ -1894,19 +2112,16 @@ async function resumeConversation() {
   if (isPaused) {
     isPaused = false;
     
-    // Wave animation removed
-    
     // Reconnect to WebSocket if needed (should still be connected)
     if (!websocket || websocket.readyState === WebSocket.CLOSED) {
       console.log("Reconnecting WebSocket...");
       await connectWebSocket();
     }
     
-    // Restart microphone
-    console.log("Restarting microphone...");
-    await startMicrophone();
-    
+    // Resume Web Speech API
     isRecording = true;
+    resumeWebSpeechAPI();
+    
     updateButtonStates('recording');
     updateStatus('Listening... Speak now');
     console.log("Conversation resumed successfully");
@@ -1932,14 +2147,23 @@ async function stopConversation() {
   isPaused = false;
   clearChatContainer();
   
-  // Stop all audio resources
-  if (microphone) {
-    microphone.disconnect();
-    processor.disconnect();
-    microphone.mediaStream.getTracks().forEach(track => track.stop());
-    microphone = null;
-    processor = null;
+  // Stop Web Speech API
+  pauseWebSpeechAPI();
+  if (recognition) {
+    try {
+      recognition.abort();
+    } catch (e) {
+      console.error('Error aborting recognition:', e);
+    }
+    recognition = null;
   }
+  
+  // Clean up audio resources
+  if (audioContext && audioContext.state !== 'closed') {
+    audioContext.close().catch(console.error);
+  }
+  audioQueue = [];
+  isPlaying = false;
   
   // Close WebSocket
   if (websocket) {
@@ -1994,6 +2218,9 @@ function clearChatContainer() {
     timestamp: new Date().toISOString(),
     messages: []
   };
+  
+  // Reset thinking indicator
+  aiThinkingIndicator = null;
   
   console.log("Chat container cleared");
 }
